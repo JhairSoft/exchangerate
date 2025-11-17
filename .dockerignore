@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+target/
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# Archivos de log y temporales
+*.log
+tmp/
+
+# Documentación y otros archivos no esenciales
+README.md
+HELP.md
