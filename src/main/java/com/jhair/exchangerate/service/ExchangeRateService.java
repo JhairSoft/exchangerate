@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.jhair.exchangerate.client.CurrencyApiClient;
+import com.jhair.exchangerate.exception.ResourceNotFoundException;
 import com.jhair.exchangerate.mapper.ExchangeRateMapper;
 import com.jhair.exchangerate.model.ExchangeRate;
 import com.jhair.exchangerate.model.dto.CreateExchangeRateRequestDTO;
@@ -32,7 +33,7 @@ public class ExchangeRateService {
 
     public Mono<ExchangeRateResponseDTO> findById(UUID id){
         return exchangeRateRepository.findById(id)
-                .switchIfEmpty(Mono.error(new RuntimeException("No se encontró el Id : " + id)))
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("No se encontró el Id : " + id)))
                 .map(mapper::toDto);
     }
 
@@ -40,7 +41,7 @@ public class ExchangeRateService {
         return exchangeRateRepository.findTopByOriginCurrencyAndFinalCurrencyOrderByDateDesc(originCurrency, finalCurrency)
                 .map(mapper::toDto)
                 .switchIfEmpty(Mono.defer(() -> findAndSaveExchangeRate(originCurrency, finalCurrency)))
-                .switchIfEmpty(Mono.error(new RuntimeException("No se encontró el cambio de " + originCurrency + " a " + finalCurrency)));
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("No se encontró el cambio de " + originCurrency + " a " + finalCurrency)));
     }
 
     public Mono<ExchangeRateResponseDTO> create(CreateExchangeRateRequestDTO dto){
@@ -51,7 +52,7 @@ public class ExchangeRateService {
 
     public Mono<ExchangeRateResponseDTO> update(UUID id, UpdateExchangeRateRequestDTO dto){
         return exchangeRateRepository.findById(id)
-                .switchIfEmpty(Mono.error(new RuntimeException("No se encontró el Id : " + id)))
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("No se encontró el Id : " + id)))
                 .flatMap( foundEntity -> {
                     mapper.updateFromDto(dto, foundEntity);
                     return exchangeRateRepository.save(foundEntity);
@@ -61,7 +62,7 @@ public class ExchangeRateService {
 
     public Mono<ExchangeRateResponseDTO> patch(UUID id, PatchExchangeRateRequestDTO dto){
         return exchangeRateRepository.findById(id)
-                .switchIfEmpty(Mono.error(new RuntimeException("No se encontró el Id : " + id)))
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("No se encontró el Id : " + id)))
                 .flatMap( foundEntity -> {
                     mapper.patchFromDto(dto, foundEntity);
                     return exchangeRateRepository.save(foundEntity);
@@ -71,7 +72,7 @@ public class ExchangeRateService {
 
     public Mono<Void> delete(UUID id){
         return exchangeRateRepository.findById(id)
-                .switchIfEmpty(Mono.error(new RuntimeException("No se encontró el Id : " + id)))
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("No se encontró el Id : " + id)))
                 .flatMap(exchangeRateRepository::delete);
     }
 
@@ -79,7 +80,7 @@ public class ExchangeRateService {
         return currencyApiClient.fetchExternalRate(originCurrency, finalCurrency)
                 .flatMap(externalService ->
                             Mono.justOrEmpty(externalService.getRates().get(finalCurrency))
-                                .switchIfEmpty(Mono.error(new RuntimeException("No se encontró la tasa para la moneda " + finalCurrency)))
+                                .switchIfEmpty(Mono.error(new ResourceNotFoundException("No se encontró la tasa para la moneda " + finalCurrency)))
                                 .flatMap(foundRate -> {
                                             ExchangeRate newRate = ExchangeRate.builder()
                                                 .originCurrency(originCurrency)
