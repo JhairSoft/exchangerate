@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.jhair.exchangerate.client.CurrencyApiClient;
 import com.jhair.exchangerate.exception.ResourceNotFoundException;
+import com.jhair.exchangerate.mapper.ApiExchangeMapper;
 import com.jhair.exchangerate.mapper.ExchangeRateMapper;
 import com.jhair.exchangerate.model.ExchangeRate;
 import com.jhair.exchangerate.model.dto.CreateExchangeRateRequestDTO;
@@ -25,6 +26,7 @@ public class ExchangeRateService {
     private final ExchangeRateRepository exchangeRateRepository;
     private final ExchangeRateMapper mapper;
     private final CurrencyApiClient currencyApiClient;
+    private final ApiExchangeMapper mapperApi;
 
     public Flux<ExchangeRateResponseDTO> findAll(){
         return exchangeRateRepository.findAll()
@@ -78,17 +80,11 @@ public class ExchangeRateService {
 
     public Mono<ExchangeRateResponseDTO> findAndSaveExchangeRate(String originCurrency, String finalCurrency){
         return currencyApiClient.fetchExternalRate(originCurrency, finalCurrency)
-                .flatMap(externalService ->
-                            Mono.justOrEmpty(externalService.getRates().get(finalCurrency))
+                .flatMap(apiResponseDto ->
+                            Mono.justOrEmpty(apiResponseDto.rates().get(finalCurrency))
                                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("No se encontró la tasa para la moneda " + finalCurrency)))
                                 .flatMap(foundRate -> {
-                                            ExchangeRate newRate = ExchangeRate.builder()
-                                                .originCurrency(originCurrency)
-                                                .finalCurrency(finalCurrency)
-                                                .date(externalService.getDate())
-                                                .value(foundRate)
-                                                .build();
-
+                                            ExchangeRate newRate = mapperApi.toEntity(apiResponseDto, originCurrency, finalCurrency, foundRate);
                                     return exchangeRateRepository.save(newRate);
                                 })
                 )
