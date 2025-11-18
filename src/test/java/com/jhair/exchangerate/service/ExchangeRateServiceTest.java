@@ -2,9 +2,10 @@ package com.jhair.exchangerate.service;
 
 import com.jhair.exchangerate.client.CurrencyApiClient;
 import com.jhair.exchangerate.exception.ResourceNotFoundException;
+import com.jhair.exchangerate.mapper.ApiExchangeMapper;
 import com.jhair.exchangerate.mapper.ExchangeRateMapper;
 import com.jhair.exchangerate.model.ExchangeRate;
-import com.jhair.exchangerate.model.ExternalService;
+import com.jhair.exchangerate.model.dto.ApiExchangeResponseDTO;
 import com.jhair.exchangerate.model.dto.ExchangeRateResponseDTO;
 import com.jhair.exchangerate.repository.ExchangeRateRepository;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,9 @@ class ExchangeRateServiceTest {
 
     @Mock
     private CurrencyApiClient currencyApiClient;
+
+    @Mock
+    private ApiExchangeMapper mapperApi;
 
     @InjectMocks
     private ExchangeRateService exchangeRateService;
@@ -82,20 +86,22 @@ class ExchangeRateServiceTest {
         // 1. Arrange (Preparar)
         String originCurrency = "USD";
         String finalCurrency = "PEN";
-        double rateFromApi = 3.80;
+        BigDecimal rateFromApi = new BigDecimal(3.80);
 
-        ExternalService apiResponse = new ExternalService();
-        apiResponse.setSuccess(true);
-        apiResponse.setDate(LocalDate.now());
-        apiResponse.setBase(originCurrency);
-        apiResponse.setRates(Map.of(finalCurrency, BigDecimal.valueOf(rateFromApi)));
+        ApiExchangeResponseDTO apiResponseDto = new ApiExchangeResponseDTO(
+                true,
+                System.currentTimeMillis() / 1000L,
+                originCurrency,
+                LocalDate.now(),
+                Map.of(finalCurrency, rateFromApi)
+        );
         
         ExchangeRate savedRate = ExchangeRate.builder()
                 .id(UUID.randomUUID())
                 .originCurrency(originCurrency)
                 .finalCurrency(finalCurrency)
-                .date(apiResponse.getDate())
-                .value(BigDecimal.valueOf(rateFromApi))
+                .date(apiResponseDto.date())
+                .value(rateFromApi)
                 .build();
 
         ExchangeRateResponseDTO expectedDto = new ExchangeRateResponseDTO(
@@ -110,7 +116,9 @@ class ExchangeRateServiceTest {
                 .thenReturn(Mono.empty());
 
         when(currencyApiClient.fetchExternalRate(originCurrency, finalCurrency))
-                .thenReturn(Mono.just(apiResponse));
+                .thenReturn(Mono.just(apiResponseDto));
+
+        when(mapperApi.toEntity(apiResponseDto, originCurrency, finalCurrency, rateFromApi)).thenReturn(savedRate);
 
         when(exchangeRateRepository.save(any(ExchangeRate.class))).thenReturn(Mono.just(savedRate));
         
