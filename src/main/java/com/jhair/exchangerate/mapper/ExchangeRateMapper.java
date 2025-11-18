@@ -18,6 +18,7 @@ public interface ExchangeRateMapper {
     
     ExchangeRateResponseDTO toDto(ExchangeRate entity);
 
+    @Mapping(target = "id", ignore = true)
     ExchangeRate toEntity(CreateExchangeRateRequestDTO dto);
 
     @Mapping(target = "id", ignore = true)
